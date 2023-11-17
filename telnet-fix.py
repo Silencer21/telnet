@@ -111,7 +111,6 @@ def create_telnet_session(ip_address, username, password):
         for line in diff:
             print(line)
 
-        # Perform further actions with the session if needed
 
         # Close the session
         session.close()
