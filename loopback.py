@@ -100,6 +100,7 @@ session.sendline('router rip')
 session.expect('R1\(config-router\)#')
 session.sendline('network 192.168.56.0')
 session.expect('R1\(config-router\)#')
+print('router interface configured successfully')
 
 #save and exit
 session.sendline('end')
