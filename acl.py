@@ -1,30 +1,87 @@
+#import modules
 import pexpect
-device_ip = "192.168.56.101"
-username = "prne"
-password = "cisco123!"
-telnet_command = f"telnet {device_ip}"
-telnet_session = pexpect.spawn(telnet_command)
-telnet_session.expect("Username:")
-telnet_session.sendline(username)
-telnet_session.expect("Password:")
-telnet_session.sendline(password)
-telnet_session.expect("#")
-telnet_session.sendline("configure terminal")
-telnet_session.expect("#")
 
-acl_name = "my_acl"
-acl_rules = ["permit tcp any any eq 80", "deny ip any any"]
+#define variables
+ip_address = '192.168.56.101'
+username = 'cisco'
+password = 'cisco123!'
 
-for rule in acl_rules:
-    telnet_session.sendline(f"access-list {acl_name} {rule}")
-    telnet_session.expect("#")
-    interface_name = "GigabitEthernet0/1"
-telnet_session.sendline(f"interface {interface_name}")
-telnet_session.expect("#")
-telnet_session.sendline(f"ip access-group {acl_name} in")
-telnet_session.expect("#")
-telnet_session.sendline("end")
-telnet_session.expect("#")
-telnet_session.sendline("write memory")
-telnet_session.expect("#")
-telnet_session.sendline("exit")
+#create telnet session
+session = pexpect.spawn('telnet ' + ip_address, encoding='utf-8', timeout=20)
+result = session.expect(['Username:', pexpect.TIMEOUT])
+
+#check if error exists, if yes display and exit
+if result != 0:
+    print('-' * 3, 'FAILURE! creating session for: ', ip_address)
+    exit()
+
+#session is expecting username, enter details
+session.sendline(username)
+result = session.expect(['Password: ', pexpect.TIMEOUT])
+
+#check if error exists, if yes display and exit
+if result != 0:
+    print('-' * 3, 'FAILURE! entering username: ', username)
+    exit()
+
+#session is expecting password, enter details
+session.sendline(password)
+result = session.expect(['#', pexpect.TIMEOUT])
+
+#check if error exists, if yes display and exit
+if result != 0:
+    print('-' * 3, 'FAILURE! entering password: ', password)
+    exit()
+
+#display success message
+print('-' * 25)
+print('')
+print('-' * 3, 'Success connecting to: ', ip_address)
+print('-' * 3, 'Username: ', username)
+print('-' * 3, 'Password: ', password)
+print('')
+print('-' * 25)
+
+#modify hostname
+session.sendline('configure terminal')
+result = session.expect([r'\(config\)#', pexpect.TIMEOUT, pexpect.EOF])
+
+if result != 0:
+    print('-' * 3, 'FAILURE entering config mode')
+    exit()
+hostname = 'R1'
+session.sendline(f'hostname {hostname}')
+result = session.expect([r'\(config\)#', pexpect.TIMEOUT, pexpect.EOF])
+if result != 0:
+    print('-' * 3, 'FAILURE setting hostname')
+    exit()
+result = session.expect([r'\(config\)#', pexpect.TIMEOUT, pexpect.EOF])
+print('Hostname changed to: ', hostname)
+
+#configure ACLs
+session.sendline('ip access-list extended BLOCK_TRAFFIC')
+session.expect([r'\(config-ext-nacl\)#', pexpect.TIMEOUT, pexpect.EOF])
+session.sendline('deny ip any any')
+session.expect([r'\(config-ext-nacl\)#', pexpect.TIMEOUT, pexpect.EOF])
+session.sendline('exit')
+
+#apply ACL to interface
+session.sendline('interface Ethernet0/0')  # Replace with the appropriate interface
+session.expect([r'\(config-if\)#', pexpect.TIMEOUT, pexpect.EOF])
+session.sendline('ip access-group BLOCK_TRAFFIC in')
+session.expect([r'\(config-if\)#', pexpect.TIMEOUT, pexpect.EOF])
+session.sendline('exit')
+
+#save the configuration
+session.sendline('write memory')
+session.expect([r'#', pexpect.TIMEOUT, pexpect.EOF])
+
+if result != 0:
+    print('-' * 3, 'FAILURE saving the configuration')
+    exit()
+
+#terminate telnet session
+session.sendline('quit')
+session.close()
+
+print('ACLs configured successfully!')
