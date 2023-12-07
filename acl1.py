@@ -73,15 +73,11 @@ session.expect([r'\(config-if\)#', pexpect.TIMEOUT, pexpect.EOF])
 session.sendline('exit')
 
 #save the configuration
-session.sendline('write memory')
-session.expect([r'#', pexpect.TIMEOUT, pexpect.EOF])
+with open('config.txt','w') as file:
+    file.write(session.before)
+    print('running configuration saved to config.txt')
 
-if result != 0:
-    print('-' * 3, 'FAILURE saving the configuration')
-    exit()
-
+print('ACLs configured successfully!')
 #terminate telnet session
 session.sendline('quit')
 session.close()
-
-print('ACLs configured successfully!')
